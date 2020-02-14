@@ -18,6 +18,7 @@ Experiments in the paper have been performed using an older TensorFlow version o
 numpy=1.16.4
 pytorch=1.2.0
 scipy=1.3.1
+dgl=0.42
 ```
 
 ## Cite
@@ -31,3 +32,8 @@ Please cite our paper if you use the code or the datasets in your own work
     year={2019},
 }
 ```
+Some modifications in DGL version:
+1. append ```F.relu``` after logits
+2. ```BatchNorm``` after GCNLayey
+3. ```nocd.utils.l2_reg_loss(model, scale=args.weight_decay)``` rather than setting weight_decay in ```Adam```
+4. ```dropout -> Relu -> BN```  

@@ -41,7 +41,7 @@ class GraphConvolution(nn.Module):
         nn.init.zeros_(self.bias)
 
     def forward(self, x, adj):
-        return adj @ (x @ self.weight) + self.bias
+        return adj @ (x @ self.weight) + self.bias #! x:sparse_tensor @ self.weight is dense_tensor
 
 
 class GCN(nn.Module):
@@ -83,6 +83,7 @@ class GCN(nn.Module):
 
     def forward(self, x, adj):
         for idx, gcn in enumerate(self.layers):
+            import pdb; pdb.set_trace()
             if self.dropout != 0:
                 x = sparse_or_dense_dropout(x, p=self.dropout, training=self.training)
             x = gcn(x, adj)
