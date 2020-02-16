@@ -5,3 +5,4 @@
 # from . import train
 # from . import utils
 from . import gcn
+from .model import create_model

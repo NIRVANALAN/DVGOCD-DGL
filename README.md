@@ -15,23 +15,12 @@ Experiments in the paper have been performed using an older TensorFlow version o
 
 ## Requirements
 ```
-numpy=1.16.4
-pytorch=1.2.0
-scipy=1.3.1
-dgl=0.42
+numpy>=1.16.4
+pytorch>=1.2.0
+scipy>=1.3.1
+dgl>=0.42
 ```
 
-## Cite
-Please cite our paper if you use the code or the datasets in your own work
-```
-@article{
-    shchur2019overlapping,
-    title={Overlapping Community Detection with Graph Neural Networks},
-    author={Oleksandr Shchur and Stephan G\"{u}nnemann},
-    journal={Deep Learning on Graphs Workshop, KDD},
-    year={2019},
-}
-```
 Some modifications in DGL version:
 1. append ```F.relu``` after logits
 2. ```BatchNorm``` after GCNLayey

@@ -12,26 +12,26 @@ from dgl.nn.pytorch import GraphConv
 class GCN(nn.Module):
     def __init__(self,
                  g,
-                 in_feats,
-                 n_hidden,
-                 n_classes,
-                 n_layers,
+                 in_dim,
+                 num_hidden,
+                 num_classes,
+                 num_layers,
                  activation,
-                 dropout, batch_norm):
+                 dropout=0.5, batch_norm=True, **kwargs):
         super(GCN, self).__init__()
         self.g = g
         self.layers = nn.ModuleList()
         # input layer
-        self.layers.append(GraphConv(in_feats, n_hidden, activation=activation))
+        self.layers.append(GraphConv(in_dim, num_hidden, activation=activation))
         # hidden layers
-        for i in range(n_layers - 1):
-            self.layers.append(GraphConv(n_hidden, n_hidden, activation=activation))
+        for i in range(num_layers - 1):
+            self.layers.append(GraphConv(num_hidden, num_hidden, activation=activation))
         # output layer
-        self.layers.append(GraphConv(n_hidden, n_classes))
+        self.layers.append(GraphConv(num_hidden, num_classes))
         self.dropout = nn.Dropout(p=dropout)
         if batch_norm:
             self.batch_norm = [
-                nn.BatchNorm1d(n_hidden, affine=False, track_running_stats=False)] * n_layers 
+                nn.BatchNorm1d(num_hidden, affine=False, track_running_stats=False)] * num_layers 
 
     def forward(self, features):
         h = features
