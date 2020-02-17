@@ -20,6 +20,7 @@ from dgl_cd.gat import GAT
 from dgl_cd import create_model
 from nocd.nn import BerpoDecoder
 
+
 def evaluate(model_saver, model, features, Z_gt, thresh):
     model_saver.restore()
     model.eval()
@@ -37,8 +38,7 @@ def main(args):
     display_step = 50       # how often to compute validation loss
     balance_loss = True     # whether to use balanced loss
     stochastic_loss = True  # whether to use stochastic or full-batch training
-    batch_size = 20000      # batch size (only for stochastic training)
-
+    batch_size = args.batch_size      # batch size (only for stochastic training)
 
     multitask_data = set(['ppi'])
     multitask = args.dataset in multitask_data
@@ -61,18 +61,19 @@ def main(args):
         scaler.fit(train_feats)
         features = scaler.transform(data.features)
         features = torch.FloatTensor(features)
-        n_classes = data.num_labels
+        # n_classes = data.num_labels
+        # if args.num_classes:
+        n_classes = args.num_classes
         if not multitask:
             labels = torch.LongTensor(data.labels)
         else:
             labels = torch.FloatTensor(data.labels)
         n_nodes = labels.shape[0]
-        A = data.graph.adjacency_matrix(transpose=False)
+        A = data.graph.adjacency_matrix_scipy(transpose=False)
         graph = data.graph
-        pdb.set_trace()
 
     # add self loop
-    if args.self_loop:
+    if args.self_loop and not args.dataset.startswith('reddit'):
         graph.remove_edges_from(nx.selfloop_edges(graph))
         graph.add_edges_from(zip(graph.nodes(), graph.nodes()))
         print("adding self-loop edges")
@@ -82,10 +83,9 @@ def main(args):
     in_feats = features.shape[1]
 
     print("""----Data statistics------'
-    #Edges %d
-    #Classes %d """
-    %(n_edges, n_classes))
-
+    # Edges %d
+    # Classes %d """
+    % (n_edges, n_classes))
 
     if args.gpu < 0:
         cuda = False
@@ -99,7 +99,7 @@ def main(args):
 
     # create GAT model
     heads = ([args.num_heads] * args.num_layers) + [args.num_out_heads]
-    model = create_model(args.arch,g,
+    model = create_model(args.arch, g,
                 num_layers=args.num_layers,
                 in_dim=in_feats,
                 num_hidden=args.num_hidden,
@@ -107,16 +107,17 @@ def main(args):
                 heads=heads,
                 activation=F.elu,
                 feat_drop=args.in_drop,
-                attn_drop = args.attn_drop,
+                attn_drop=args.attn_drop,
                 negative_slope=args.negative_slope,
                 residual=args.residual)
-
 
     if cuda:
         model.cuda()
     print(model)
-    sampler = nocd.sampler.get_edge_sampler(A, batch_size, batch_size, num_workers=5)
-    decoder = nocd.nn.BerpoDecoder(n_nodes, A.nnz, balance_loss=balance_loss) # ? nnz: number of nonzero values
+    sampler = nocd.sampler.get_edge_sampler(
+        A, batch_size, batch_size, num_workers=5)
+    # ? nnz: number of nonzero values
+    decoder = nocd.nn.BerpoDecoder(n_nodes, A.nnz, balance_loss=balance_loss)
     # use optimizer
     # optimizer = torch.optim.SGD(model.parameters(), lr = args.lr)
     optimizer = torch.optim.Adam(model.parameters(),
@@ -126,19 +127,21 @@ def main(args):
     ##########################################
     val_loss = np.inf
     validation_fn = lambda: val_loss
-    early_stopping = nocd.train.NoImprovementStopping(validation_fn, patience=5)
+    early_stopping = nocd.train.NoImprovementStopping(
+        validation_fn, patience=5)
     model_saver = nocd.train.ModelSaver(model)
 
+    import pdb; pdb.set_trace()
     for epoch, batch in enumerate(sampler):
         if epoch > args.n_epochs:
             break
-        if epoch % display_step == 0:
+        if 'npz' in args.dataset and epoch % display_step == 0:
             with torch.no_grad():
                 model.eval()
                 # Compute validation loss
                 logits = F.relu(model(features))
                 val_loss = decoder.loss_full(logits, A)
-                
+
                 # Check if it's time for early stopping / to save the model
                 early_stopping.next_step()
                 if early_stopping.should_save():
@@ -146,8 +149,9 @@ def main(args):
                 if early_stopping.should_stop():
                     print(f'Breaking due to early stopping at epoch {epoch}')
                     break
-                print(f'Epoch {epoch:4d}, loss.full = {val_loss:.4f}, NMI = {evaluate(model_saver,model, features,Z_gt, thresh=args.thresh):.4f}')
-                
+                print(
+                    f'Epoch {epoch:4d}, loss.full = {val_loss:.4f}, NMI = {evaluate(model_saver,model, features,Z_gt, thresh=args.thresh):.4f}')
+
         # Training step
         model.train()
         optimizer.zero_grad()
@@ -158,9 +162,11 @@ def main(args):
         else:
             loss = decoder.loss_full(logits, A)
         loss += nocd.utils.l2_reg_loss(model, scale=args.weight_decay)
+        print(f'Epoch {epoch:4f}, loss.batch = {loss:.4f}')
         loss.backward()
         optimizer.step()
-    print(f'Final NMI = {evaluate(model_saver,model, features,Z_gt, args.thresh):.4f}')
+    # print(
+    #     f'Final NMI = {evaluate(model_saver,model, features,Z_gt, args.thresh):.4f}')
 
 
 if __name__ == '__main__':
@@ -174,10 +180,6 @@ if __name__ == '__main__':
             help="learning rate")
     parser.add_argument("--n-epochs", type=int, default=2000,
             help="number of training epochs")
-    # parser.add_argument("--n-hidden", type=int, default=128,
-    #         help="number of hidden gcn units")
-    # parser.add_argument("--n-layers", type=int, default=1,
-    #         help="number of hidden gcn layers")
     parser.add_argument("--weight-decay", type=float, default=5e-4,
             help="Weight for L2 loss")
     parser.add_argument("--thresh", type=float, default=0.5,
@@ -204,6 +206,10 @@ if __name__ == '__main__':
                         help="use residual connection")
     # MODEL
     parser.add_argument("--arch", type=str, default='gcn', help='the arch of gcn model')
+    parser.add_argument("--num-classes", type=int, default=1500,
+                        help="Number of clusters, for Reddit 1500 by default")
+    parser.add_argument("--batch_size", type=int, default=5000,
+                        help="Batch size")
 
     args = parser.parse_args()
 
