@@ -19,7 +19,9 @@ from helper.nn import BerpoDecoder
 
 from embedding_cd import create_model
 
-import pdb; pdb.set_trace()
+import pdb
+pdb.set_trace()
+
 
 def evaluate(model_saver, model, features, Z_gt, thresh):
     model_saver.restore()
@@ -38,7 +40,8 @@ def main(args):
     display_step = 50       # how often to compute validation loss
     balance_loss = True     # whether to use balanced loss
     stochastic_loss = True  # whether to use stochastic or full-batch training
-    batch_size = args.batch_size      # batch size (only for stochastic training)
+    # batch size (only for stochastic training)
+    batch_size = args.batch_size
 
     multitask_data = set(['ppi'])
     multitask = args.dataset in multitask_data
@@ -54,7 +57,7 @@ def main(args):
         labels = torch.LongTensor(Z_gt)
         # x_norm = helper.helper.to_sparse_tensor(feature_norm).cuda()
     else:
-        data = load_data(args)
+        data = load_data(args)  # load citation datasets
         train_nid = np.nonzero(data.train_mask)[0].astype(np.int64)
         train_feats = data.features[train_nid]
         scaler = sklearn.preprocessing.StandardScaler()
@@ -85,7 +88,7 @@ def main(args):
     print("""----Data statistics------'
     # Edges %d
     # Classes %d """
-    % (n_edges, n_classes))
+          % (n_edges, n_classes))
 
     if args.gpu < 0:
         cuda = False
@@ -100,16 +103,16 @@ def main(args):
     # create GAT model
     heads = ([args.num_heads] * args.num_layers) + [args.num_out_heads]
     model = create_model(args.arch, g,
-                num_layers=args.num_layers,
-                in_dim=in_feats,
-                num_hidden=args.num_hidden,
-                num_classes=n_classes,
-                heads=heads,
-                activation=F.elu,
-                feat_drop=args.in_drop,
-                attn_drop=args.attn_drop,
-                negative_slope=args.negative_slope,
-                residual=args.residual)
+                         num_layers=args.num_layers,
+                         in_dim=in_feats,
+                         num_hidden=args.num_hidden,
+                         num_classes=n_classes,
+                         heads=heads,
+                         activation=F.elu,
+                         feat_drop=args.in_drop,
+                         attn_drop=args.attn_drop,
+                         negative_slope=args.negative_slope,
+                         residual=args.residual)
 
     if cuda:
         model.cuda()
@@ -122,16 +125,17 @@ def main(args):
     # optimizer = torch.optim.SGD(model.parameters(), lr = args.lr)
     optimizer = torch.optim.Adam(model.parameters(),
                                  lr=args.lr,)
-                                #  weight_decay=args.weight_decay)
+    #  weight_decay=args.weight_decay)
     # initialize graph
     ##########################################
     val_loss = np.inf
-    validation_fn = lambda: val_loss
+    def validation_fn(): return val_loss
     early_stopping = helper.train.NoImprovementStopping(
         validation_fn, patience=5)
     model_saver = helper.train.ModelSaver(model)
 
-    import pdb; pdb.set_trace()
+    import pdb
+    pdb.set_trace()
     for epoch, batch in enumerate(sampler):
         if epoch > args.n_epochs:
             break
@@ -173,19 +177,19 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GCN')
     register_data_args(parser)
     parser.add_argument("--dropout", type=float, default=0.5,
-            help="dropout probability")
+                        help="dropout probability")
     parser.add_argument("--gpu", type=int, default=0,
-            help="gpu")
+                        help="gpu")
     parser.add_argument("--lr", type=float, default=5e-3,
-            help="learning rate")
+                        help="learning rate")
     parser.add_argument("--n-epochs", type=int, default=2000,
-            help="number of training epochs")
+                        help="number of training epochs")
     parser.add_argument("--weight-decay", type=float, default=5e-4,
-            help="Weight for L2 loss")
+                        help="Weight for L2 loss")
     parser.add_argument("--thresh", type=float, default=0.5,
-            help="Threshold for Affilicaiton matrix")
+                        help="Threshold for Affilicaiton matrix")
     parser.add_argument("--self-loop", action='store_false',
-            help="graph self-loop (default=True)")
+                        help="graph self-loop (default=True)")
     # parser.set_defaults(self_loop=False)
     # GAT args
     parser.add_argument("--in-drop", type=float, default=.6,
@@ -205,7 +209,8 @@ if __name__ == '__main__':
     parser.add_argument("--residual", action="store_true", default=False,
                         help="use residual connection")
     # MODEL
-    parser.add_argument("--arch", type=str, default='gcn', help='the arch of gcn model')
+    parser.add_argument("--arch", type=str, default='gcn',
+                        help='the arch of gcn model')
     parser.add_argument("--num-classes", type=int, default=1500,
                         help="Number of clusters, for Reddit 1500 by default")
     parser.add_argument("--batch_size", type=int, default=5000,
