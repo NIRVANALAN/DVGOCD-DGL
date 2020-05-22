@@ -1,14 +1,13 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from dgl.nn.pytorch import GraphConv
 
 class GAE(nn.Module):
-    def __init__(self, in_dim, num_hidden, num_classes, dropout):
+    def __init__(self, in_dim, num_hidden, num_classes, dropout, activation=F.relu):
         super(GAE, self).__init__()
-        self.gc1=GraphConv(in_dim, num_hidden, activation=activation))
-        # self.gc1 = GraphConvolution(input_feat_dim, hidden_dim1, dropout, act=F.relu)
-        self.gc2 = GraphConvolution(num_hidden, num_hidden, activation=activation)
-        # self.gc3 = GraphConvolution(hidden_dim1, hidden_dim2, dropout, act=lambda x: x)
+        self.gc1=GraphConv(in_dim, num_hidden, activation=activation)
+        self.gc2 = GraphConv(num_hidden, num_hidden, activation=activation)
         self.dc = InnerProductDecoder(dropout, act=lambda x: x)
 
     def encode(self, x, adj):

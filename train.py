@@ -14,19 +14,19 @@ from dgl import DGLGraph
 from dgl.data import load_data, register_data_args
 from sklearn.preprocessing import normalize
 
-import nocd
-from dgl_cd.gcn import GCN
-from dgl_cd.gat import GAT
-from dgl_cd import create_model
-from nocd.nn import BerpoDecoder
+import helper
+from helper.nn import BerpoDecoder
 
+from embedding_cd import create_model
+
+import pdb; pdb.set_trace()
 
 def evaluate(model_saver, model, features, Z_gt, thresh):
     model_saver.restore()
     model.eval()
     logits = F.relu(model(features))
     preds = logits.cpu().detach().numpy() > thresh
-    nmi = nocd.metrics.overlapping_nmi(preds, Z_gt)
+    nmi = helper.metrics.overlapping_nmi(preds, Z_gt)
     # print(f'Final nmi = {nmi:.3f}')
     return nmi
 
@@ -45,14 +45,14 @@ def main(args):
 
     # load and preprocess dataset
     if 'npz' in args.dataset:
-        loader = nocd.data.load_dataset('data/mag_cs.npz')
+        loader = helper.data.load_dataset('data/mag_cs.npz')
         A, features, Z_gt = loader['A'], loader['X'], loader['Z']
         n_nodes, n_classes = Z_gt.shape
         graph = nx.Graph(A)
         feature_norm = normalize(features)
         features = torch.FloatTensor(feature_norm.todense())
         labels = torch.LongTensor(Z_gt)
-        # x_norm = nocd.utils.to_sparse_tensor(feature_norm).cuda()
+        # x_norm = helper.helper.to_sparse_tensor(feature_norm).cuda()
     else:
         data = load_data(args)
         train_nid = np.nonzero(data.train_mask)[0].astype(np.int64)
@@ -114,10 +114,10 @@ def main(args):
     if cuda:
         model.cuda()
     print(model)
-    sampler = nocd.sampler.get_edge_sampler(
+    sampler = helper.sampler.get_edge_sampler(
         A, batch_size, batch_size, num_workers=5)
     # ? nnz: number of nonzero values
-    decoder = nocd.nn.BerpoDecoder(n_nodes, A.nnz, balance_loss=balance_loss)
+    decoder = helper.nn.BerpoDecoder(n_nodes, A.nnz, balance_loss=balance_loss)
     # use optimizer
     # optimizer = torch.optim.SGD(model.parameters(), lr = args.lr)
     optimizer = torch.optim.Adam(model.parameters(),
@@ -127,9 +127,9 @@ def main(args):
     ##########################################
     val_loss = np.inf
     validation_fn = lambda: val_loss
-    early_stopping = nocd.train.NoImprovementStopping(
+    early_stopping = helper.train.NoImprovementStopping(
         validation_fn, patience=5)
-    model_saver = nocd.train.ModelSaver(model)
+    model_saver = helper.train.ModelSaver(model)
 
     import pdb; pdb.set_trace()
     for epoch, batch in enumerate(sampler):
@@ -161,7 +161,7 @@ def main(args):
             loss = decoder.loss_batch(logits, ones_idx, zeros_idx)
         else:
             loss = decoder.loss_full(logits, A)
-        loss += nocd.utils.l2_reg_loss(model, scale=args.weight_decay)
+        loss += helper.helper.l2_reg_loss(model, scale=args.weight_decay)
         print(f'Epoch {epoch:4f}, loss.batch = {loss:.4f}')
         loss.backward()
         optimizer.step()

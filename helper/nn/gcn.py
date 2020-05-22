@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from nocd.utils import to_sparse_tensor
+from ..utils import to_sparse_tensor
 
 __all__ = [
     'GCN',

@@ -1,9 +1,9 @@
-from .kmeans_torch import kmeans as kmeans_torch
-from .lloyd.kmeans import lloyd
+from kmeans_pytorch import kmeans
+from .dbscan import dbscan
 
 cluster_methods = {
-    'kmeans': kmeans_torch,
-    # 'kmeans_torch': kmeans_torch,
+    'kmeans': kmeans,
+    'dbscan': dbscan,
 }  # density peak, DBSCAN,
 
 

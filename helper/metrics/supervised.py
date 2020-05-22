@@ -1,7 +1,7 @@
 import numpy as np
 import warnings
 
-from nocd.utils import coms_list_to_matrix
+from ..utils import coms_list_to_matrix
 
 __all__ = [
     'symmetric_jaccard',

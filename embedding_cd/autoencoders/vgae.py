@@ -14,7 +14,7 @@ class GVAE(nn.Module):
         self.hidden_layers = nn.ModuleList()
         for i in range(num_layers - 1):
             self.hidden_layers.append(
-                GraphConv(num_hidden, num_hidden, activation=activation))
+                GraphConv(num_hidden, num_hidden, activation=F.relu))
         self.gc2 = GraphConv(num_hidden, num_classes, bias=False)
         self.gc3 = GraphConv(num_hidden, num_classes, bias=False)
         self.batch_norm = [
