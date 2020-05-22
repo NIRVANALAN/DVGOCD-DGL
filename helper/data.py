@@ -1,8 +1,13 @@
 import numpy as np
 import scipy.sparse as sp
+import dgl.data as data
 
 
-def load_dataset(file_name):
+def load_citation(name):
+    return data.CitationGraphDataset(name=name)  # return dgl_graph
+
+
+def load_dataset(file_name):  # load nx graph
     """Load a graph from a Numpy binary file.
 
     Parameters
