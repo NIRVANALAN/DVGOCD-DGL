@@ -1,7 +1,7 @@
 import tensorflow as tf
 
-from embed_methods.graphsage.layers import Layer, Dense
-from embed_methods.graphsage.inits import glorot, zeros
+from .layers import Layer, Dense
+from .inits import glorot, zeros
 
 class MeanAggregator(Layer):
     """

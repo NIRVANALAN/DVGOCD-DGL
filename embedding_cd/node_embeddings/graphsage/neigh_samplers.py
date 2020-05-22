@@ -1,7 +1,7 @@
 from __future__ import division
 from __future__ import print_function
 
-from embed_methods.graphsage.layers import Layer
+from .layers import Layer
 
 import tensorflow as tf
 flags = tf.app.flags
