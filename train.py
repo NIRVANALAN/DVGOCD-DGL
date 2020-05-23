@@ -19,9 +19,6 @@ from helper.nn import BerpoDecoder
 
 from embedding_cd import create_model
 
-import pdb
-pdb.set_trace()
-
 
 def evaluate(model_saver, model, features, Z_gt, thresh):
     model_saver.restore()
@@ -48,7 +45,8 @@ def main(args):
 
     # load and preprocess dataset
     if 'npz' in args.dataset:
-        loader = helper.data.load_dataset('data/mag_cs.npz')
+        # loader = helper.data.load_dataset('data/mag_cs.npz')
+        loader = helper.data.load_dataset(args.dataset)
         A, features, Z_gt = loader['A'], loader['X'], loader['Z']
         n_nodes, n_classes = Z_gt.shape
         graph = nx.Graph(A)
@@ -64,16 +62,18 @@ def main(args):
         scaler.fit(train_feats)
         features = scaler.transform(data.features)
         features = torch.FloatTensor(features)
-        # n_classes = data.num_labels
         # if args.num_classes:
-        n_classes = args.num_classes
         if not multitask:
             labels = torch.LongTensor(data.labels)
         else:
             labels = torch.FloatTensor(data.labels)
-        n_nodes = labels.shape[0]
-        A = data.graph.adjacency_matrix_scipy(transpose=False)
+        labels = F.one_hot(labels)  # .numpy()
+        Z_gt = labels.numpy()
+        n_nodes, n_classes = labels.shape
+        A = nx.adjacency_matrix(data.graph)  # .todense()
         graph = data.graph
+    # import pdb
+    # pdb.set_trace()
 
     # add self loop
     if args.self_loop and not args.dataset.startswith('reddit'):
@@ -134,17 +134,15 @@ def main(args):
         validation_fn, patience=5)
     model_saver = helper.train.ModelSaver(model)
 
-    import pdb
-    pdb.set_trace()
     for epoch, batch in enumerate(sampler):
         if epoch > args.n_epochs:
             break
-        if 'npz' in args.dataset and epoch % display_step == 0:
+        if epoch % display_step == 0 and epoch > 0:
             with torch.no_grad():
                 model.eval()
                 # Compute validation loss
-                logits = F.relu(model(features))
-                val_loss = decoder.loss_full(logits, A)
+                affiliation_logits = F.relu(model(features))
+                val_loss = decoder.loss_full(affiliation_logits, A)
 
                 # Check if it's time for early stopping / to save the model
                 early_stopping.next_step()
@@ -152,25 +150,29 @@ def main(args):
                     model_saver.save()
                 if early_stopping.should_stop():
                     print(f'Breaking due to early stopping at epoch {epoch}')
-                    break
                 print(
-                    f'Epoch {epoch:4d}, loss.full = {val_loss:.4f}, NMI = {evaluate(model_saver,model, features,Z_gt, thresh=args.thresh):.4f}')
+                    f'Epoch {epoch}, loss.full = {val_loss:.4f}, NMI = {evaluate(model_saver,model, features,Z_gt, thresh=args.thresh):.4f}')
+                import pdb
+                pdb.set_trace()
+                np.save('hidden', hidden.cpu().numpy())
 
         # Training step
         model.train()
         optimizer.zero_grad()
-        logits = F.relu(model(features))
+        hidden = model(features)
+        affiliation_logits = F.relu(hidden)
         ones_idx, zeros_idx = batch
         if stochastic_loss:
-            loss = decoder.loss_batch(logits, ones_idx, zeros_idx)
+            loss = decoder.loss_batch(affiliation_logits, ones_idx, zeros_idx)
         else:
-            loss = decoder.loss_full(logits, A)
-        loss += helper.helper.l2_reg_loss(model, scale=args.weight_decay)
-        print(f'Epoch {epoch:4f}, loss.batch = {loss:.4f}')
+            loss = decoder.loss_full(affiliation_logits, A)
+        loss += helper.utils.l2_reg_loss(model, scale=args.weight_decay)
+        if epoch % 10 == 0:
+            print(f'Epoch {epoch}, loss.batch = {loss:.4f}')
         loss.backward()
         optimizer.step()
-    # print(
-    #     f'Final NMI = {evaluate(model_saver,model, features,Z_gt, args.thresh):.4f}')
+    print(
+        f'Final NMI = {evaluate(model_saver,model, features,Z_gt, args.thresh):.4f}')
 
 
 if __name__ == '__main__':

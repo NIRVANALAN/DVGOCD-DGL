@@ -9,8 +9,8 @@ from . import autoencoders
 from . import node_embeddings
 
 FACTORY = {
-    'gcn': autoencoders.gcn,
-    'gat': autoencoders.gat,
+    'gcn': autoencoders.GCN,
+    'gat': autoencoders.GAT,
     'gae': autoencoders.GAE,
     'vgae': autoencoders.GVAE}
 
