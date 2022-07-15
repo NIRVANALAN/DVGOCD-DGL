@@ -48,7 +48,7 @@ decorator==4.4.1
 defusedxml==0.6.0
 dgl==0.4.3.post2
 diff-match-patch==20181111
-distributed==2.11.0
+distributed==2021.10.0
 docutils==0.15.2
 entrypoints==0.3
 et-xmlfile==1.0.1
